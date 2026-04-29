@@ -1,0 +1,191 @@
+using System;
+using System.Threading;
+using Core.AppStates.Contracts;
+using Core.AppStates.Contracts.State;
+using Core.AppStates.Data;
+using Core.SceneManagement.AppStateScenes;
+using Core.SceneManagement.AppStateScenes.Contracts;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using VContainer.Unity;
+
+namespace Core.AppStates.Runtime
+{
+    public sealed class AppStateMachine : IAppStateMachine, IStartable, IDisposable
+    {
+        private readonly IAppSceneCoordinator _sceneCoordinator;
+        private readonly IAppStateControllerFactory _stateControllerFactory;
+        private readonly IAppTransition _transition;
+
+        private readonly SemaphoreSlim _transitionLock = new(1, 1);
+        private readonly CancellationTokenSource _lifetimeCts = new();
+
+        private IAppStateController _currentStateController;
+        private bool _isDisposed;
+
+        public AppStateId? CurrentState { get; private set; }
+
+        public AppStateMachine(
+            IAppSceneCoordinator sceneCoordinator,
+            IAppStateControllerFactory stateControllerFactory,
+            IAppTransition transition)
+        {
+            _sceneCoordinator = sceneCoordinator ?? throw new ArgumentNullException(nameof(sceneCoordinator));
+            _stateControllerFactory = stateControllerFactory ?? throw new ArgumentNullException(nameof(stateControllerFactory));
+            _transition = transition ?? throw new ArgumentNullException(nameof(transition));
+        }
+
+        public void Start()
+        {
+            StartAsync(_lifetimeCts.Token).Forget(Debug.LogException);
+        }
+
+        private async UniTask StartAsync(CancellationToken token)
+        {
+            await _sceneCoordinator.InitializePersistentScenesAsync(token);
+            await SwitchToAsync(AppStateId.Bootstrap, token: token);
+        }
+
+        public async UniTask SwitchToAsync(
+            AppStateId stateId,
+            object payload = null,
+            CancellationToken token = default)
+        {
+            ThrowIfDisposed();
+
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                token,
+                _lifetimeCts.Token);
+
+            var linkedToken = linkedCts.Token;
+
+            await _transitionLock.WaitAsync(linkedToken);
+
+            try
+            {
+                var nextState = stateId;
+                var nextPayload = payload;
+
+                while (!linkedToken.IsCancellationRequested)
+                {
+                    var result = await RunStateAsync(nextState, nextPayload, linkedToken);
+
+                    if (!result.HasNextState)
+                        break;
+
+                    if (result.NextState != null) 
+                        nextState = result.NextState.Value;
+                    
+                    nextPayload = result.Payload;
+                }
+            }
+            finally
+            {
+                _transitionLock.Release();
+            }
+        }
+
+        private async UniTask<AppStateExitResult> RunStateAsync(
+            AppStateId stateId,
+            object payload,
+            CancellationToken token)
+        {
+            if (CurrentState == stateId && _currentStateController != null)
+            {
+                Debug.LogWarning($"App state '{stateId}' is already active.");
+                return AppStateExitResult.None;
+            }
+
+            await _transition.ShowAsync(token);
+
+            await ExitCurrentStateAsync(token);
+
+            try
+            {
+                await _sceneCoordinator.LoadStateScenesAsync(stateId, token);
+
+                _currentStateController = _stateControllerFactory.Create(stateId);
+                CurrentState = stateId;
+
+                await _currentStateController.EnterAsync(payload, token);
+
+                await _transition.HideAsync(token);
+
+                var result = await _currentStateController.RunAsync(token);
+
+                await _transition.ShowAsync(token);
+
+                await ExitCurrentStateAsync(token);
+
+                await _transition.HideAsync(token);
+
+                return result;
+            }
+            catch
+            {
+                await SafeExitCurrentStateAsync(token);
+                throw;
+            }
+        }
+
+        private async UniTask ExitCurrentStateAsync(CancellationToken token)
+        {
+            if (_currentStateController == null)
+                return;
+
+            var stateToExit = _currentStateController;
+
+            _currentStateController = null;
+            CurrentState = null;
+
+            await stateToExit.ExitAsync(token);
+            stateToExit.Dispose();
+        }
+
+        private async UniTask SafeExitCurrentStateAsync(CancellationToken token)
+        {
+            if (_currentStateController == null)
+                return;
+
+            try
+            {
+                await ExitCurrentStateAsync(token);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(nameof(AppStateMachine));
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            _lifetimeCts.Cancel();
+
+            try
+            {
+                _currentStateController?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+
+            _currentStateController = null;
+            CurrentState = null;
+
+            _lifetimeCts.Dispose();
+            _transitionLock.Dispose();
+        }
+    }
+}
