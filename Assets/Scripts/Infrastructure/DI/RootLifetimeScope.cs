@@ -1,5 +1,6 @@
 using Core.AppStates.Contracts;
 using Core.AppStates.Runtime;
+using Core.Input.Runtime;
 using Core.SceneManagement.AppStateScenes;
 using Core.SceneManagement.AppStateScenes.Configs;
 using Core.SceneManagement.AppStateScenes.Contracts;
@@ -11,6 +12,7 @@ using Core.UI.Windows.Config;
 using Core.UI.Windows.Runtime;
 using Infrastructure.Factories;
 using UnityEngine;
+using UnityEngine.InputSystem.UI;
 using VContainer;
 using VContainer.Unity;
 
@@ -18,14 +20,18 @@ namespace Infrastructure.DI
 {
     public class RootLifetimeScope : LifetimeScope
     {
-        [Header("Scene Configuration")]
+        [Header("References")]
         [SerializeField] private AppSceneDatabase appSceneDatabase;
         [SerializeField] private WindowServiceConfig windowServiceConfig;
+        [SerializeField] private GameObject eventSystemPrefab;
+        
 
         protected override void Configure(IContainerBuilder builder)
         {
             RegisterSceneManagement(builder);
             RegisterAppStateSystem(builder);
+            RegisterConfigs(builder);
+            RegisterServices(builder);
         }
 
         private void RegisterSceneManagement(IContainerBuilder builder)
@@ -46,15 +52,24 @@ namespace Infrastructure.DI
 
             builder.RegisterEntryPoint<AppStateMachine>();
         }
+        
+        private void RegisterInputService(IContainerBuilder builder)
+        {
+            GameObject eventSystemInstance = Instantiate(eventSystemPrefab);
+            DontDestroyOnLoad(eventSystemInstance);
+            InputSystemUIInputModule uiInputModule = eventSystemInstance.GetComponent<InputSystemUIInputModule>();
+            builder.Register<InputService>(Lifetime.Singleton).AsImplementedInterfaces().WithParameter(uiInputModule);
+        }
 
         private void RegisterConfigs(IContainerBuilder builder)
         {
             builder.RegisterInstance(windowServiceConfig);
         }
         
-        private void RegisterWindowService(IContainerBuilder builder)
+        private void RegisterServices(IContainerBuilder builder)
         {
             builder.Register<AddressableWindowFactory>(Lifetime.Scoped).AsImplementedInterfaces();
+            RegisterInputService(builder);
         }
     }
 }
