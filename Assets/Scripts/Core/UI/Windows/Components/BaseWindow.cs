@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Core.UI.Windows.Components
 {
-    public abstract class WindowBase : MonoBehaviour, IWindow
+    public abstract class BaseWindow : MonoBehaviour, IWindow
     {
         [SerializeField] private RectTransform rootRectTransform;
         [SerializeField] private CanvasGroup canvasGroup;

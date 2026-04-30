@@ -1,11 +1,12 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 
 namespace Core.Patterns.MVP
 {
     public interface IPresenter : IDisposable
     {
-        UniTask Enter(object param);
-        UniTask Exit();
+        UniTask EnterAsync(CancellationToken token = default);
+        UniTask ExitAsync(CancellationToken token = default);
     }
 }

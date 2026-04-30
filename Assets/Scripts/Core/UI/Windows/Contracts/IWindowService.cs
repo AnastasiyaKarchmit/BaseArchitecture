@@ -13,7 +13,12 @@ namespace Core.UI.Windows.Contracts
         bool IsLoadingAnyWindow { get; }
 
         UniTask<IWindow> CreateAsync(WindowId windowId, CancellationToken token = default);
+        UniTask<TWindow> CreateAsync<TWindow>(WindowId windowId, CancellationToken token = default)
+            where TWindow : class, IWindow;
+        
         UniTask<IWindow> GetOrCreateAsync(WindowId windowId, CancellationToken token = default);
+        UniTask<TWindow> GetOrCreateAsync<TWindow>(WindowId windowId, CancellationToken token = default)
+            where TWindow : class, IWindow;
 
         bool TryFind(WindowId windowId, out IWindow window);
         IWindow GetTopWindow();

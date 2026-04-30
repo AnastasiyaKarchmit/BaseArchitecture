@@ -69,6 +69,7 @@ namespace Infrastructure.DI
         private void RegisterServices(IContainerBuilder builder)
         {
             builder.Register<AddressableWindowFactory>(Lifetime.Scoped).AsImplementedInterfaces();
+            builder.Register<WindowService>(Lifetime.Scoped).AsImplementedInterfaces();
             RegisterInputService(builder);
         }
     }

@@ -92,6 +92,36 @@ namespace Core.UI.Windows.Runtime
                 ? UniTask.FromResult(window)
                 : CreateAsync(windowId, token);
         }
+        
+        public async UniTask<TWindow> CreateAsync<TWindow>(
+            WindowId windowId,
+            CancellationToken token = default)
+            where TWindow : class, IWindow
+        {
+            var window = await CreateAsync(windowId, token);
+
+            if (window is TWindow typedWindow)
+                return typedWindow;
+
+            throw new InvalidOperationException(
+                $"Window '{windowId}' was created, but it is not of type '{typeof(TWindow).Name}'. " +
+                $"Actual type: '{window.GetType().Name}'.");
+        }
+
+        public async UniTask<TWindow> GetOrCreateAsync<TWindow>(
+            WindowId windowId,
+            CancellationToken token = default)
+            where TWindow : class, IWindow
+        {
+            var window = await GetOrCreateAsync(windowId, token);
+
+            if (window is TWindow typedWindow)
+                return typedWindow;
+
+            throw new InvalidOperationException(
+                $"Window '{windowId}' exists, but it is not of type '{typeof(TWindow).Name}'. " +
+                $"Actual type: '{window.GetType().Name}'.");
+        }
 
         public bool TryFind(WindowId windowId, out IWindow window)
         {

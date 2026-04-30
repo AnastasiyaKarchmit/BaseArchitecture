@@ -7,6 +7,7 @@ namespace Core.UI.Windows.Data
         Settings,
         Pause,
         ConfirmExit,
-        Error
+        Error, 
+        LoadingScreen,
     }
 }
