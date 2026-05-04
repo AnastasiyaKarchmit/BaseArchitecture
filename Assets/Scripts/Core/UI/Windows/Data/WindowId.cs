@@ -9,5 +9,6 @@ namespace Core.UI.Windows.Data
         ConfirmExit,
         Error, 
         LoadingScreen,
+        BootstrapLoadingScreen,
     }
 }

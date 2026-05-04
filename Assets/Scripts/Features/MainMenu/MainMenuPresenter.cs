@@ -1,0 +1,63 @@
+using System;
+using System.Threading;
+using Core.Input.Contracts;
+using Core.Input.Runtime;
+using Core.Patterns.MVP;
+using Core.UI.Windows.Contracts;
+using Core.UI.Windows.Data;
+using Cysharp.Threading.Tasks;
+using R3;
+
+namespace Features.MainMenu
+{
+    public sealed class MainMenuPresenter : IPresenter
+    {
+        private readonly MainMenuModel _model;
+        private readonly IWindowService _windowService;
+        private readonly IInputService _inputService;
+
+        private readonly ReactiveCommand<Unit> _playCommand = new();
+
+        private MainMenuView _view;
+
+        public Observable<Unit> PlayRequested => _playCommand;
+
+        public MainMenuPresenter(
+            MainMenuModel model,
+            IWindowService windowService,
+            IInputService inputService)
+        {
+            _model = model ?? throw new ArgumentNullException(nameof(model));
+            _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
+            _inputService = inputService ?? throw new ArgumentNullException(nameof(inputService));
+        }
+
+        public async UniTask EnterAsync(CancellationToken token = default)
+        {
+            _inputService.SetMode(InputMode.UIOnly);
+
+            _view = await _windowService.GetOrCreateAsync<MainMenuView>(
+                WindowId.MainMenu,
+                token);
+
+            token.ThrowIfCancellationRequested();
+
+            _view.Initialize(_playCommand);
+
+            await _view.ShowAsync();
+        }
+
+        public async UniTask ExitAsync(CancellationToken token = default)
+        {
+            if (_view != null)
+                await _view.HideAsync();
+
+            _view = null;
+        }
+
+        public void Dispose()
+        {
+            _playCommand.Dispose();
+        }
+    }
+}

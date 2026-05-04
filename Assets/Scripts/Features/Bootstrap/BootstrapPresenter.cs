@@ -17,7 +17,6 @@ namespace Features.Bootstrap
         private readonly IInputService _inputService;
 
         private BootstrapView _view;
-        private CancellationTokenSource _tipLoopCts;
 
         public BootstrapPresenter(
             BootstrapModel model,
@@ -34,17 +33,16 @@ namespace Features.Bootstrap
             _inputService.SetMode(InputMode.Disabled);
 
             _view = await _windowService.GetOrCreateAsync<BootstrapView>(
-                WindowId.LoadingScreen,
+                WindowId.BootstrapLoadingScreen,
                 token);
+            
+            token.ThrowIfCancellationRequested();
 
             _view.SetVersion(Application.version);
             _view.SetProgress(0f);
             _view.SetStatus("Starting...");
 
             await _view.ShowAsync();
-
-            _tipLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            RunTipLoopAsync(_tipLoopCts.Token).Forget();
         }
 
         public async UniTask RunAsync(CancellationToken token)
@@ -66,43 +64,14 @@ namespace Features.Bootstrap
 
         public async UniTask ExitAsync(CancellationToken token = default)
         {
-            StopTipLoop();
 
             if (_view != null)
                 await _view.HideAsync();
         }
 
-        private async UniTaskVoid RunTipLoopAsync(CancellationToken token)
-        {
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    _view?.SetTip(_model.GetNextTip());
-
-                    await UniTask.Delay(
-                        _model.TooltipDelayMs,
-                        cancellationToken: token);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private void StopTipLoop()
-        {
-            if (_tipLoopCts == null)
-                return;
-
-            _tipLoopCts.Cancel();
-            _tipLoopCts.Dispose();
-            _tipLoopCts = null;
-        }
-
         public void Dispose()
         {
-            StopTipLoop();
+            // No unmanaged/runtime resources yet.
         }
     }
 }

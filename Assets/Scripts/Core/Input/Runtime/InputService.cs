@@ -136,7 +136,10 @@ namespace Core.Input.Runtime
         private void EnsureInitialized()
         {
             if (_inputActions == null)
-                throw new InvalidOperationException($"{nameof(InputService)} is not initialized.");
+            {
+                Initialize();
+                //throw new InvalidOperationException($"{nameof(InputService)} is not initialized.");
+            }
         }
 
         private void ThrowIfDisposed()

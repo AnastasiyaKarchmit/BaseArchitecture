@@ -5,6 +5,7 @@ using System.Threading;
 using Core.UI.Windows.Contracts;
 using Core.UI.Windows.Data;
 using Cysharp.Threading.Tasks;
+using Infrastructure.DI;
 using VContainer;
 using VContainer.Unity;
 
@@ -26,11 +27,11 @@ namespace Core.UI.Windows.Runtime
         public bool IsLoadingAnyWindow { get; private set; }
 
         public WindowService(
-            IWindowFactory windowFactory,
-            LifetimeScope lifetimeScope)
+            IWindowFactory windowFactory, LifetimeScope lifetimeScope)
         {
             _windowFactory = windowFactory ?? throw new ArgumentNullException(nameof(windowFactory));
 
+            //var lifetimeScope = LifetimeScope.Find<RootLifetimeScope>();
             if (lifetimeScope != null &&
                 lifetimeScope.Parent != null &&
                 lifetimeScope.Parent.Container.TryResolve(out IWindowService parentWindowService))

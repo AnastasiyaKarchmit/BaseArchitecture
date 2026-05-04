@@ -6,6 +6,7 @@ using Core.AppStates.Data;
 using Core.SceneManagement.AppStateScenes;
 using Core.SceneManagement.AppStateScenes.Contracts;
 using Cysharp.Threading.Tasks;
+using Infrastructure.DI;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -15,25 +16,31 @@ namespace Core.AppStates.Runtime
     {
         private readonly IAppSceneCoordinator _sceneCoordinator;
         private readonly IAppStateControllerFactory _stateControllerFactory;
+        private readonly IAppStateScopeBuilder _scopeBuilder;
         private readonly IAppTransition _transition;
+        private readonly LifetimeScope _rootScope;
 
         private readonly SemaphoreSlim _transitionLock = new(1, 1);
         private readonly CancellationTokenSource _lifetimeCts = new();
 
         private IAppStateController _currentStateController;
+        private LifetimeScope _currentStateScope;
         private bool _isDisposed;
 
         public AppStateId? CurrentState { get; private set; }
 
         public AppStateMachine(
+            LifetimeScope rootScope,
             IAppSceneCoordinator sceneCoordinator,
             IAppStateControllerFactory stateControllerFactory,
+            IAppStateScopeBuilder scopeBuilder,
             IAppTransition transition)
         {
+            _rootScope = rootScope ?? throw new ArgumentNullException(nameof(rootScope));
             _sceneCoordinator = sceneCoordinator ?? throw new ArgumentNullException(nameof(sceneCoordinator));
             _stateControllerFactory = stateControllerFactory ?? throw new ArgumentNullException(nameof(stateControllerFactory));
             _transition = transition ?? throw new ArgumentNullException(nameof(transition));
-        }
+            _scopeBuilder = scopeBuilder ?? throw new ArgumentNullException(nameof(scopeBuilder));        }
 
         public void Start()
         {
@@ -96,15 +103,20 @@ namespace Core.AppStates.Runtime
                 return AppStateExitResult.None;
             }
 
-            await _transition.ShowAsync(token);
-
             await ExitCurrentStateAsync(token);
 
             try
             {
                 await _sceneCoordinator.LoadStateScenesAsync(stateId, token);
 
-                _currentStateController = _stateControllerFactory.Create(stateId);
+                _currentStateScope = _scopeBuilder.BuildScope(
+                    _rootScope,
+                    _sceneCoordinator.CurrentStateScenes);
+
+                _currentStateController = _stateControllerFactory.Create(
+                    stateId,
+                    _currentStateScope.Container);
+                
                 CurrentState = stateId;
 
                 await _currentStateController.EnterAsync(payload, token);
@@ -116,8 +128,6 @@ namespace Core.AppStates.Runtime
                 await _transition.ShowAsync(token);
 
                 await ExitCurrentStateAsync(token);
-
-                await _transition.HideAsync(token);
 
                 return result;
             }
@@ -136,10 +146,15 @@ namespace Core.AppStates.Runtime
             var stateToExit = _currentStateController;
 
             _currentStateController = null;
+            _currentStateScope?.Dispose();
+            _currentStateScope = null;
             CurrentState = null;
 
-            await stateToExit.ExitAsync(token);
-            stateToExit.Dispose();
+            if (stateToExit != null)
+            {
+                await stateToExit.ExitAsync(token);
+                stateToExit.Dispose();
+            }
         }
 
         private async UniTask SafeExitCurrentStateAsync(CancellationToken token)
@@ -175,6 +190,7 @@ namespace Core.AppStates.Runtime
             try
             {
                 _currentStateController?.Dispose();
+                _currentStateScope?.Dispose();
             }
             catch (Exception exception)
             {
@@ -182,6 +198,7 @@ namespace Core.AppStates.Runtime
             }
 
             _currentStateController = null;
+            _currentStateScope = null;
             CurrentState = null;
 
             _lifetimeCts.Dispose();

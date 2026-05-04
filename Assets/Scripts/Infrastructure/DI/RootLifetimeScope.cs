@@ -1,3 +1,4 @@
+using System;
 using Core.AppStates.Contracts;
 using Core.AppStates.Runtime;
 using Core.Input.Runtime;
@@ -12,6 +13,7 @@ using Core.UI.Windows.Config;
 using Core.UI.Windows.Runtime;
 using Infrastructure.Factories;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using VContainer;
 using VContainer.Unity;
@@ -46,9 +48,11 @@ namespace Infrastructure.DI
 
         private void RegisterAppStateSystem(IContainerBuilder builder)
         {
-            builder.Register<IAppTransition, EmptyAppTransition>(Lifetime.Singleton);
+            builder.Register<IAppTransition, AppTransition>(Lifetime.Singleton);
 
             builder.Register<IAppStateControllerFactory, AppStateControllerFactory>(Lifetime.Singleton);
+
+            builder.Register<IAppStateScopeBuilder, AppStateScopeBuilder>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<AppStateMachine>();
         }
@@ -57,8 +61,25 @@ namespace Infrastructure.DI
         {
             GameObject eventSystemInstance = Instantiate(eventSystemPrefab);
             DontDestroyOnLoad(eventSystemInstance);
-            InputSystemUIInputModule uiInputModule = eventSystemInstance.GetComponent<InputSystemUIInputModule>();
-            builder.Register<InputService>(Lifetime.Singleton).AsImplementedInterfaces().WithParameter(uiInputModule);
+
+            EventSystem eventSystem = eventSystemInstance.GetComponent<EventSystem>();
+            InputSystemUIInputModule uiInputModule =
+                eventSystemInstance.GetComponent<InputSystemUIInputModule>();
+
+            if (eventSystem == null)
+                throw new InvalidOperationException(
+                    $"{nameof(eventSystemPrefab)} must have an {nameof(EventSystem)} component.");
+
+            if (uiInputModule == null)
+                throw new InvalidOperationException(
+                    $"{nameof(eventSystemPrefab)} must have an {nameof(InputSystemUIInputModule)} component.");
+
+            builder.RegisterInstance(eventSystem);
+            builder.RegisterInstance(uiInputModule);
+
+            builder.Register<InputService>(Lifetime.Singleton)
+                .AsImplementedInterfaces()
+                .AsSelf();
         }
 
         private void RegisterConfigs(IContainerBuilder builder)

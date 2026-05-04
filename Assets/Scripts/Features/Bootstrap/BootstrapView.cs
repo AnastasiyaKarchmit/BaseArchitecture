@@ -3,13 +3,12 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Features
+namespace Features.Bootstrap
 {
     public sealed class BootstrapView : BaseView
     {
         [SerializeField] private Slider progressBar;
         [SerializeField] private TMP_Text statusText;
-        [SerializeField] private TMP_Text tipText;
         [SerializeField] private TMP_Text versionText;
 
         public void SetVersion(string version)
@@ -28,12 +27,6 @@ namespace Features
         {
             if (progressBar != null)
                 progressBar.value = Mathf.Clamp01(normalizedProgress);
-        }
-
-        public void SetTip(string tip)
-        {
-            if (tipText != null)
-                tipText.text = tip;
         }
 
         public void SetLoadingCompleted()
