@@ -9,21 +9,21 @@ namespace Features.MainMenu
 {
     public sealed class MainMenuAppStateController : IAppStateController
     {
-        private readonly MainMenuPresenter _presenter;
+        private readonly MainMenuFlowController _flowController;
 
         private readonly CompositeDisposable _disposables = new();
         private UniTaskCompletionSource<AppStateExitResult> _completionSource;
 
-        public MainMenuAppStateController(MainMenuPresenter presenter)
+        public MainMenuAppStateController(MainMenuFlowController flowController)
         {
-            _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
+            _flowController = flowController ?? throw new ArgumentNullException(nameof(flowController));
         }
 
         public async UniTask EnterAsync(object payload, CancellationToken token)
         {
             _completionSource = new UniTaskCompletionSource<AppStateExitResult>();
 
-            _presenter.PlayRequested
+            _flowController.PlayRequested
                 .Subscribe(_ =>
                 {
                     _completionSource.TrySetResult(
@@ -31,7 +31,7 @@ namespace Features.MainMenu
                 })
                 .AddTo(_disposables);
 
-            await _presenter.EnterAsync(token);
+            await _flowController.EnterAsync(token);
         }
 
         public async UniTask<AppStateExitResult> RunAsync(CancellationToken token)
@@ -46,13 +46,14 @@ namespace Features.MainMenu
 
         public UniTask ExitAsync(CancellationToken token)
         {
-            return _presenter.ExitAsync(token);
+            _disposables.Clear();
+            return _flowController.ExitAsync(token);
         }
 
         public void Dispose()
         {
             _disposables.Dispose();
-            _presenter.Dispose();
+            _flowController.Dispose();
         }
     }
 }

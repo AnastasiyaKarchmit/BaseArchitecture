@@ -6,11 +6,9 @@ using Core.Input.Runtime;
 using Core.Save;
 using Core.Save.JSON;
 using Core.Save.SaveStorage;
-using Core.SceneManagement.AppStateScenes;
 using Core.SceneManagement.AppStateScenes.Configs;
 using Core.SceneManagement.AppStateScenes.Contracts;
 using Core.SceneManagement.AppStateScenes.Runtime;
-using Core.SceneManagement.Loading;
 using Core.SceneManagement.Loading.Contracts;
 using Core.SceneManagement.Loading.Runtime;
 using Core.UI.Windows.Config;
@@ -85,6 +83,8 @@ namespace Infrastructure.DI
             builder.Register<InputService>(Lifetime.Singleton)
                 .AsImplementedInterfaces()
                 .AsSelf();
+            
+            builder.Register<InputGate>(Lifetime.Singleton);
         }
 
         private void RegisterConfigs(IContainerBuilder builder)
@@ -106,12 +106,12 @@ namespace Infrastructure.DI
             builder.Register<IJsonService, JsonService>(Lifetime.Singleton);
 
 #if USE_PLAYER_PREFS_SAVE
-    builder.Register<ISaveStorage, PlayerPrefsSaveStorage>(Lifetime.Singleton);
+            builder.Register<ISaveStorage, PlayerPrefsSaveStorage>(Lifetime.Singleton);
 #else
             builder.Register<ISaveStorage, FileSaveStorage>(Lifetime.Singleton);
 #endif
             
-            builder.RegisterEntryPoint<SaveSystem>();
+            builder.RegisterEntryPoint<SaveSystem>().As<ISaveSystem>();
         }
     }
 }

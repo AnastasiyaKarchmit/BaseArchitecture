@@ -29,6 +29,6 @@ namespace Core.Save
     {
         public float MusicVolume = 1f;
         public float SfxVolume = 1f;
-        public int QualityLevel = 2;
+        public bool Fullscreen;
     }
 }

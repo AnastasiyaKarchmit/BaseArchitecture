@@ -17,10 +17,12 @@ namespace Features.MainMenu
         private readonly IInputService _inputService;
 
         private readonly ReactiveCommand<Unit> _playCommand = new();
+        private readonly ReactiveCommand<Unit> _settingsCommand = new();
 
         private MainMenuView _view;
 
         public Observable<Unit> PlayRequested => _playCommand;
+        public Observable<Unit> SettingsRequested => _settingsCommand;
 
         public MainMenuPresenter(
             MainMenuModel model,
@@ -42,7 +44,7 @@ namespace Features.MainMenu
 
             token.ThrowIfCancellationRequested();
 
-            _view.Initialize(_playCommand);
+            _view.Initialize(_playCommand, _settingsCommand);
 
             await _view.ShowAsync();
         }
@@ -55,9 +57,15 @@ namespace Features.MainMenu
             _view = null;
         }
 
+        public void HideInstantly()
+        {
+            _view?.HideInstantly();
+        }
+
         public void Dispose()
         {
             _playCommand.Dispose();
+            _settingsCommand.Dispose();
         }
     }
 }

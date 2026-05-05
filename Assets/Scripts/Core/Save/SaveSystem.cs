@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Core.Application;
 using Core.Save.SaveStorage;
 using Cysharp.Threading.Tasks;
@@ -8,16 +7,19 @@ using VContainer.Unity;
 
 namespace Core.Save
 {
-    public sealed class SaveSystem : IStartable, IDisposable
+    public sealed class SaveSystem : ISaveSystem, IStartable, IDisposable
     {
         private const string SaveFileName = "save.json";
 
         private readonly ISaveStorage _storage;
         private readonly IAppLifecycleService _appLifecycleService;
-        private readonly List<ISaveDataProvider> _providers;
+
+        private readonly List<ISaveDataProvider> _providers = new();
+        private readonly HashSet<ISaveDataProvider> _loadedProviders = new();
 
         private PersistentData _data;
         private bool _isLoaded;
+        private bool _isLoading;
         private bool _isSaving;
 
         public PersistentData Data => _data;
@@ -25,12 +27,10 @@ namespace Core.Save
 
         public SaveSystem(
             ISaveStorage storage,
-            IAppLifecycleService appLifecycleService,
-            IReadOnlyList<ISaveDataProvider> providers)
+            IAppLifecycleService appLifecycleService)
         {
             _storage = storage;
             _appLifecycleService = appLifecycleService;
-            _providers = providers.ToList();
         }
 
         public void Start()
@@ -44,31 +44,52 @@ namespace Core.Save
 
         public async UniTask LoadAsync()
         {
-            if (_isLoaded)
+            if (_isLoaded || _isLoading)
                 return;
 
-            _data = await _storage.LoadAsync(SaveFileName, new PersistentData());
+            _isLoading = true;
 
-            foreach (ISaveDataProvider provider in _providers)
-                await provider.LoadAsync(_data);
+            try
+            {
+                _data = await _storage.LoadAsync(SaveFileName, new PersistentData());
+                
+                // Data is now available, so any provider registering from this point
+                // can immediately load from it.
+                _isLoaded = true;
 
-            _isLoaded = true;
+                ISaveDataProvider[] providersSnapshot = _providers.ToArray();
+
+                if (providersSnapshot is { Length: > 0 })
+                    foreach (ISaveDataProvider provider in providersSnapshot)
+                        await LoadProviderAsync(provider);
+            }
+            finally
+            {
+                _isLoading = false;
+            }
         }
 
-        public void RegisterRuntimeProvider(ISaveDataProvider provider)
+        public void Register(ISaveDataProvider provider)
         {
+            if (provider == null)
+                throw new ArgumentNullException(nameof(provider));
+
             if (_providers.Contains(provider))
                 return;
 
             _providers.Add(provider);
 
             if (_isLoaded)
-                provider.LoadAsync(_data).Forget();
+                LoadProviderAsync(provider).Forget();
         }
 
-        public void UnregisterRuntimeProvider(ISaveDataProvider provider)
+        public void Unregister(ISaveDataProvider provider)
         {
+            if (provider == null)
+                return;
+
             _providers.Remove(provider);
+            _loadedProviders.Remove(provider);
         }
 
         public async UniTask SaveAsync()
@@ -97,11 +118,20 @@ namespace Core.Save
         public async UniTask ResetAsync()
         {
             _data = new PersistentData();
+            _loadedProviders.Clear();
 
             foreach (ISaveDataProvider provider in _providers)
-                await provider.LoadAsync(_data);
+                await LoadProviderAsync(provider);
 
             await SaveAsync();
+        }
+
+        private async UniTask LoadProviderAsync(ISaveDataProvider provider)
+        {
+            if (!_loadedProviders.Add(provider))
+                return;
+
+            await provider.LoadAsync(_data);
         }
 
         private void OnApplicationFocusChanged(bool isFocused)

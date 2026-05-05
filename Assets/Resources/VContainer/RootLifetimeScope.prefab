@@ -96,3 +96,4 @@ MonoBehaviour:
   appSceneDatabase: {fileID: 11400000, guid: a4946417cb94e994289dac218eba6198, type: 2}
   windowServiceConfig: {fileID: 11400000, guid: dc71fe190d1e2ea48afda1ceb91faf12, type: 2}
   eventSystemPrefab: {fileID: 5017999668956972448, guid: 6d19fa026706472f8399d9dcbe97e4a2, type: 3}
+  appLifecycleService: {fileID: 6070076189680720735}

@@ -11,12 +11,15 @@ namespace Features.MainMenu
     public sealed class MainMenuView : BaseView
     {
         [SerializeField] private Button playButton;
+        [SerializeField] private Button settingsButton;
         [SerializeField] private TMP_Text titleText;
 
         private readonly CompositeDisposable _disposables = new();
         private readonly TimeSpan _buttonThrottle = TimeSpan.FromMilliseconds(500);
 
-        public void Initialize(ReactiveCommand<Unit> playCommand)
+        public void Initialize(
+            ReactiveCommand<Unit> playCommand,
+            ReactiveCommand<Unit> settingsCommand)
         {
             _disposables.Clear();
 
@@ -30,6 +33,16 @@ namespace Features.MainMenu
                         handler => playButton.onClick.RemoveListener(handler.Invoke))
                     .ThrottleFirst(_buttonThrottle)
                     .Subscribe(_ => playCommand.Execute(Unit.Default))
+                    .AddTo(_disposables);
+            }
+
+            if (settingsButton != null)
+            {
+                Observable.FromEvent(
+                        handler => settingsButton.onClick.AddListener(handler.Invoke),
+                        handler => settingsButton.onClick.RemoveListener(handler.Invoke))
+                    .ThrottleFirst(_buttonThrottle)
+                    .Subscribe(_ => settingsCommand.Execute(Unit.Default))
                     .AddTo(_disposables);
             }
         }
