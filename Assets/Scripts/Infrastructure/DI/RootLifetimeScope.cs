@@ -1,7 +1,11 @@
 using System;
+using Core.Application;
 using Core.AppStates.Contracts;
 using Core.AppStates.Runtime;
 using Core.Input.Runtime;
+using Core.Save;
+using Core.Save.JSON;
+using Core.Save.SaveStorage;
 using Core.SceneManagement.AppStateScenes;
 using Core.SceneManagement.AppStateScenes.Configs;
 using Core.SceneManagement.AppStateScenes.Contracts;
@@ -26,7 +30,7 @@ namespace Infrastructure.DI
         [SerializeField] private AppSceneDatabase appSceneDatabase;
         [SerializeField] private WindowServiceConfig windowServiceConfig;
         [SerializeField] private GameObject eventSystemPrefab;
-        
+        [SerializeField] private AppLifecycleService appLifecycleService;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -34,6 +38,7 @@ namespace Infrastructure.DI
             RegisterAppStateSystem(builder);
             RegisterConfigs(builder);
             RegisterServices(builder);
+            RegisterSaveSystem(builder);
         }
 
         private void RegisterSceneManagement(IContainerBuilder builder)
@@ -91,7 +96,22 @@ namespace Infrastructure.DI
         {
             builder.Register<AddressableWindowFactory>(Lifetime.Scoped).AsImplementedInterfaces();
             builder.Register<WindowService>(Lifetime.Scoped).AsImplementedInterfaces();
+            builder.RegisterComponent(appLifecycleService)
+                .As<IAppLifecycleService>();
             RegisterInputService(builder);
+        }
+
+        private void RegisterSaveSystem(IContainerBuilder builder)
+        {
+            builder.Register<IJsonService, JsonService>(Lifetime.Singleton);
+
+#if USE_PLAYER_PREFS_SAVE
+    builder.Register<ISaveStorage, PlayerPrefsSaveStorage>(Lifetime.Singleton);
+#else
+            builder.Register<ISaveStorage, FileSaveStorage>(Lifetime.Singleton);
+#endif
+            
+            builder.RegisterEntryPoint<SaveSystem>();
         }
     }
 }
