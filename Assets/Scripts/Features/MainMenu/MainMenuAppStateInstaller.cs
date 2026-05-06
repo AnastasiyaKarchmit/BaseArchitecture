@@ -1,5 +1,8 @@
 using Core.AppStates.Components;
-using Features.MainMenu.States.SettingsState;
+using Core.UI.Windows.Contracts;
+using Core.UI.Windows.Runtime;
+using Features.MainMenu.States.MainMenuState;
+using Features.Shared.SettingsState;
 using VContainer;
 
 namespace Features.MainMenu
@@ -14,6 +17,7 @@ namespace Features.MainMenu
             builder.Register<SettingsView>(Lifetime.Singleton);
             builder.Register<MainMenuFlowController>(Lifetime.Singleton);
             builder.Register<MainMenuAppStateController>(Lifetime.Singleton);
+            builder.Register<IWindowTransitionBackground, WindowTransitionBackground>(Lifetime.Singleton);
         }
     }
 }

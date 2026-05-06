@@ -8,7 +8,7 @@ using Core.UI.Windows.Data;
 using Cysharp.Threading.Tasks;
 using R3;
 
-namespace Features.MainMenu
+namespace Features.MainMenu.States.MainMenuState
 {
     public sealed class MainMenuPresenter : IPresenter
     {
@@ -36,7 +36,7 @@ namespace Features.MainMenu
 
         public async UniTask EnterAsync(CancellationToken token = default)
         {
-            _inputService.SetMode(InputMode.UIOnly);
+            _inputService.SetMode(InputMode.Disabled);
 
             _view = await _windowService.GetOrCreateAsync<MainMenuView>(
                 WindowId.MainMenu,
@@ -47,6 +47,8 @@ namespace Features.MainMenu
             _view.Initialize(_playCommand, _settingsCommand);
 
             await _view.ShowAsync();
+            
+            _inputService.SetMode(InputMode.UIOnly);
         }
 
         public async UniTask ExitAsync(CancellationToken token = default)

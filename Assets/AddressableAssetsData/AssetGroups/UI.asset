@@ -15,8 +15,23 @@ MonoBehaviour:
   m_GroupName: UI
   m_GUID: c41912be66019cd4185ae87086479a9c
   m_SerializeEntries:
+  - m_GUID: 0d1330d99d30e704fbf2b829e51ac178
+    m_Address: PauseView
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4111316c18027fc47915a88ab5ee1162
+    m_Address: SettingsView
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 414ea1f693326bd4fa600578cef99deb
     m_Address: BootstrapView
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7720759912b7fa244afe728b20c7c7f2
+    m_Address: GameplayView
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

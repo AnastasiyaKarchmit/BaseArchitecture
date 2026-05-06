@@ -22,6 +22,7 @@ namespace Core.AppStates.Runtime
             IReadOnlyList<string> sceneNames,
             bool cleanupBeforeInstall = true)
         {
+            var loadedScenes = FindLoadedScenes(sceneNames);
             var installers = FindInstallers(sceneNames);
 
             if (cleanupBeforeInstall)
@@ -36,10 +37,29 @@ namespace Core.AppStates.Runtime
                     installer.RegisterDependencies(builder);
             });
 
-            // foreach (var installer in installers)
-            //     installer.InjectSceneObjects(stateScope.Container);
-
+            MoveScopeToOwnerScene(stateScope, loadedScenes);
+            
             return stateScope;
+        }
+        
+        private static IReadOnlyList<Scene> FindLoadedScenes(IReadOnlyList<string> sceneNames)
+        {
+            var result = new List<Scene>();
+
+            foreach (var sceneName in sceneNames)
+            {
+                var scene = SceneManager.GetSceneByName(sceneName);
+
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    Debug.LogWarning($"Scene '{sceneName}' is not loaded. Cannot use it for app state scope.");
+                    continue;
+                }
+
+                result.Add(scene);
+            }
+
+            return result;
         }
 
         private static IReadOnlyList<IAppStateInstaller> FindInstallers(
@@ -68,5 +88,36 @@ namespace Core.AppStates.Runtime
                 .Distinct()
                 .ToArray();
         }
+        
+        private static void MoveScopeToOwnerScene(
+            LifetimeScope stateScope,
+            IReadOnlyList<Scene> loadedScenes)
+        {
+            if (stateScope == null)
+                return;
+
+            if (loadedScenes == null || loadedScenes.Count == 0)
+            {
+                Debug.LogWarning("Cannot move app state scope because no loaded owner scene was found.");
+                return;
+            }
+
+            var ownerScene = loadedScenes[0];
+
+            if (!ownerScene.IsValid() || !ownerScene.isLoaded)
+            {
+                Debug.LogWarning($"Cannot move app state scope to scene '{ownerScene.name}' because it is not valid or not loaded.");
+                return;
+            }
+
+            var scopeGameObject = stateScope.gameObject;
+            scopeGameObject.name = $"AppStateScope ({ownerScene.name})";
+
+            // MoveGameObjectToScene works reliably for root GameObjects.
+            scopeGameObject.transform.SetParent(null, true);
+
+            SceneManager.MoveGameObjectToScene(scopeGameObject, ownerScene);
+        }
+        
     }
 }

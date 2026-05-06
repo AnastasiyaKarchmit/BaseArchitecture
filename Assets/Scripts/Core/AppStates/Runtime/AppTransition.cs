@@ -8,9 +8,9 @@ namespace Core.AppStates.Runtime
 {
     public sealed class AppTransition : IAppTransition
     {
-        private const float FadeInDuration = 0.35f;
-        private const float FadeOutDuration = 0.45f;
-        private const int OverlaySortOrder = 30000;
+        private const float FadeInDuration = 0f;
+        private const float FadeOutDuration = 0.3f;
+        private const int OverlaySortOrder = -10;
         private const float MaxAnimationDeltaTime = 1f / 20f;
 
         private CanvasGroup _overlayCanvasGroup;

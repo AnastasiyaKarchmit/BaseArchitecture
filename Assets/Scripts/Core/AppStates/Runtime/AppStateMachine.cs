@@ -3,10 +3,8 @@ using System.Threading;
 using Core.AppStates.Contracts;
 using Core.AppStates.Contracts.State;
 using Core.AppStates.Data;
-using Core.SceneManagement.AppStateScenes;
 using Core.SceneManagement.AppStateScenes.Contracts;
 using Cysharp.Threading.Tasks;
-using Infrastructure.DI;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -44,7 +42,13 @@ namespace Core.AppStates.Runtime
 
         public void Start()
         {
-            StartAsync(_lifetimeCts.Token).Forget(Debug.LogException);
+            StartAsync(_lifetimeCts.Token).Forget(exception =>
+            {
+                if (exception is OperationCanceledException)
+                    return;
+
+                Debug.LogException(exception);
+            });
         }
 
         private async UniTask StartAsync(CancellationToken token)
@@ -64,7 +68,7 @@ namespace Core.AppStates.Runtime
                 token,
                 _lifetimeCts.Token);
 
-            var linkedToken = linkedCts.Token;
+            CancellationToken linkedToken = linkedCts.Token;
 
             await _transitionLock.WaitAsync(linkedToken);
 
@@ -75,20 +79,34 @@ namespace Core.AppStates.Runtime
 
                 while (!linkedToken.IsCancellationRequested)
                 {
-                    var result = await RunStateAsync(nextState, nextPayload, linkedToken);
+                    AppStateExitResult result = await RunStateAsync(
+                        nextState,
+                        nextPayload,
+                        linkedToken);
 
                     if (!result.HasNextState)
                         break;
 
-                    if (result.NextState != null) 
+                    if (result.NextState != null)
                         nextState = result.NextState.Value;
-                    
+
                     nextPayload = result.Payload;
                 }
             }
+            catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
+            {
+                // Expected when exiting play mode or shutting down.
+            }
             finally
             {
-                _transitionLock.Release();
+                try
+                {
+                    _transitionLock.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Only needed if someone still disposes the semaphore.
+                }
             }
         }
 
@@ -143,17 +161,27 @@ namespace Core.AppStates.Runtime
             if (_currentStateController == null)
                 return;
 
-            var stateToExit = _currentStateController;
+            IAppStateController stateToExit = _currentStateController;
+            LifetimeScope scopeToDispose = _currentStateScope;
 
             _currentStateController = null;
-            _currentStateScope?.Dispose();
             _currentStateScope = null;
             CurrentState = null;
 
-            if (stateToExit != null)
+            try
             {
                 await stateToExit.ExitAsync(token);
-                stateToExit.Dispose();
+            }
+            finally
+            {
+                try
+                {
+                    stateToExit.Dispose();
+                }
+                finally
+                {
+                    scopeToDispose?.Dispose();
+                }
             }
         }
 
@@ -202,6 +230,7 @@ namespace Core.AppStates.Runtime
             CurrentState = null;
 
             _lifetimeCts.Dispose();
+            
             _transitionLock.Dispose();
         }
     }

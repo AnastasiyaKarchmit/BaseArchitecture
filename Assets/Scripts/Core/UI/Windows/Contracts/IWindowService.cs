@@ -22,7 +22,7 @@ namespace Core.UI.Windows.Contracts
 
         bool TryFind(WindowId windowId, out IWindow window);
         IWindow GetTopWindow();
-
+        bool Destroy(WindowId windowId);
         void DestroyAll();
     }
 }

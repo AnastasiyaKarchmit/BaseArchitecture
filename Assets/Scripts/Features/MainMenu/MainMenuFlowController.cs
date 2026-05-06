@@ -1,8 +1,10 @@
 using System;
 using System.Threading;
 using Core.Input.Runtime;
+using Core.UI.Windows.Contracts;
 using Cysharp.Threading.Tasks;
-using Features.MainMenu.States.SettingsState;
+using Features.MainMenu.States.MainMenuState;
+using Features.Shared.SettingsState;
 using R3;
 using Stateless;
 using UnityEngine;
@@ -26,6 +28,7 @@ namespace Features.MainMenu
         private readonly MainMenuPresenter _mainMenuPresenter;
         private readonly SettingsPresenter _settingsPresenter;
         private readonly InputGate _inputGate;
+        private readonly IWindowTransitionBackground _windowTransitionBackground;
 
         private readonly StateMachine<MainMenuFlowState, MainMenuFlowTrigger> _stateMachine;
         private readonly CompositeDisposable _disposables = new();
@@ -33,7 +36,7 @@ namespace Features.MainMenu
 
         private CancellationToken _currentToken;
         
-        private const float InputUnlockDelay = 0.5f;
+        private const float InputUnlockDelay = 0.2f;
         
         private bool _isTransitioning;
 
@@ -42,11 +45,13 @@ namespace Features.MainMenu
         public MainMenuFlowController(
             MainMenuPresenter mainMenuPresenter,
             SettingsPresenter settingsPresenter,
-            InputGate inputGate)
+            InputGate inputGate, IWindowTransitionBackground windowTransitionBackground)
         {
             _mainMenuPresenter = mainMenuPresenter ?? throw new ArgumentNullException(nameof(mainMenuPresenter));
             _settingsPresenter = settingsPresenter ?? throw new ArgumentNullException(nameof(settingsPresenter));
             _inputGate = inputGate ?? throw new ArgumentNullException(nameof(inputGate));
+            _windowTransitionBackground = windowTransitionBackground 
+                                          ?? throw new ArgumentNullException(nameof(windowTransitionBackground));
 
             _stateMachine = new StateMachine<MainMenuFlowState, MainMenuFlowTrigger>(
                 MainMenuFlowState.Main);
@@ -58,7 +63,7 @@ namespace Features.MainMenu
         public async UniTask EnterAsync(CancellationToken token)
         {
             _currentToken = token;
-
+            
             _mainMenuPresenter.HideInstantly();
             _settingsPresenter.HideInstantly();
 
@@ -83,6 +88,7 @@ namespace Features.MainMenu
                 .OnExitAsync(async () =>
                 {
                     await UniTask.SwitchToMainThread();
+                    _windowTransitionBackground.Create();
                     await _mainMenuPresenter.ExitAsync(_currentToken);
                 })
                 .Permit(MainMenuFlowTrigger.OpenSettings, MainMenuFlowState.Settings)

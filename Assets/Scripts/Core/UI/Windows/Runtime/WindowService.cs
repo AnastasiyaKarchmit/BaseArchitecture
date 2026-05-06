@@ -30,8 +30,7 @@ namespace Core.UI.Windows.Runtime
             IWindowFactory windowFactory, LifetimeScope lifetimeScope)
         {
             _windowFactory = windowFactory ?? throw new ArgumentNullException(nameof(windowFactory));
-
-            //var lifetimeScope = LifetimeScope.Find<RootLifetimeScope>();
+            
             if (lifetimeScope != null &&
                 lifetimeScope.Parent != null &&
                 lifetimeScope.Parent.Container.TryResolve(out IWindowService parentWindowService))
@@ -169,6 +168,57 @@ namespace Core.UI.Windows.Runtime
             _isDestroyingAll = false;
 
             OnBecameEmpty?.Invoke();
+        }
+        
+        public bool Destroy(WindowId windowId)
+        {
+            ThrowIfDisposed();
+
+            for (var node = _windows.Last; node != null; node = node.Previous)
+            {
+                if (node.Value.Id != windowId)
+                    continue;
+
+                DestroyNode(node);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void DestroyNode(LinkedListNode<WindowInfo> node)
+        {
+            var window = node.Value.Window;
+
+            if (window == null)
+            {
+                _windows.Remove(node);
+
+                if (_windows.Count == 0)
+                    OnBecameEmpty?.Invoke();
+
+                return;
+            }
+
+            var wasTopWindow = node == _windows.Last;
+            var previousNode = node.Previous;
+
+            window.Destroyed -= OnWindowDestroyed;
+
+            _windows.Remove(node);
+
+            if (wasTopWindow)
+            {
+                DeactivateWindow(window);
+
+                if (!HasParentWindowsOrLoading() && previousNode?.Value.Window != null)
+                    ActivateWindow(previousNode.Value.Window);
+            }
+
+            _windowFactory.Release(window);
+
+            if (_windows.Count == 0)
+                OnBecameEmpty?.Invoke();
         }
 
         private void OnWindowDestroyed(IWindow window)

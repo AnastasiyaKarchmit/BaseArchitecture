@@ -29,3 +29,24 @@ MonoBehaviour:
       m_SubObjectType: 
       m_SubObjectGUID: 
       m_EditorAssetChanged: 0
+  - id: 2
+    prefabReference:
+      m_AssetGUID: 4111316c18027fc47915a88ab5ee1162
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+  - id: 1
+    prefabReference:
+      m_AssetGUID: 7720759912b7fa244afe728b20c7c7f2
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
+  - id: 3
+    prefabReference:
+      m_AssetGUID: 0d1330d99d30e704fbf2b829e51ac178
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0

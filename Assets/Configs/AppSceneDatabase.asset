@@ -24,3 +24,8 @@ MonoBehaviour:
       sceneAsset: {fileID: 102900000, guid: 15dcee00dcd92ca4daed3663099cec20, type: 3}
       sceneName: MainMenu
     additionalScenes: []
+  - stateId: 2
+    mainScene:
+      sceneAsset: {fileID: 102900000, guid: 3ec429d1fefd5cc4f9e5939d7c66e5cc, type: 3}
+      sceneName: Gameplay
+    additionalScenes: []

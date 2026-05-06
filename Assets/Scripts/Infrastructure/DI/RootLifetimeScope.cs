@@ -11,6 +11,7 @@ using Core.SceneManagement.AppStateScenes.Contracts;
 using Core.SceneManagement.AppStateScenes.Runtime;
 using Core.SceneManagement.Loading.Contracts;
 using Core.SceneManagement.Loading.Runtime;
+using Core.Settings;
 using Core.UI.Windows.Config;
 using Core.UI.Windows.Runtime;
 using Infrastructure.Factories;
@@ -98,6 +99,7 @@ namespace Infrastructure.DI
             builder.Register<WindowService>(Lifetime.Scoped).AsImplementedInterfaces();
             builder.RegisterComponent(appLifecycleService)
                 .As<IAppLifecycleService>();
+            builder.Register<ISettingsService, SettingsService>(Lifetime.Singleton);
             RegisterInputService(builder);
         }
 

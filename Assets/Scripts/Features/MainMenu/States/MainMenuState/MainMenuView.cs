@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Features.MainMenu
+namespace Features.MainMenu.States.MainMenuState
 {
     public sealed class MainMenuView : BaseView
     {
