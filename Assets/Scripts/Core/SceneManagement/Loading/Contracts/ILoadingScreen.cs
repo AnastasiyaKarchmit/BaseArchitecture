@@ -5,5 +5,9 @@ using Cysharp.Threading.Tasks;
 namespace Core.SceneManagement.Loading.Contracts
 {
     public interface ILoadingScreen : IWindow
-    { }
+    {
+        void SetProgress(float progress);
+        void ShowInstantly();
+        void HideInstantly();
+    }
 }

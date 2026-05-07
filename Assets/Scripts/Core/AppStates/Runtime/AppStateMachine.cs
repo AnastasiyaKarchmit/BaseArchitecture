@@ -53,7 +53,7 @@ namespace Core.AppStates.Runtime
 
         private async UniTask StartAsync(CancellationToken token)
         {
-            await _sceneCoordinator.InitializePersistentScenesAsync(token);
+            await _sceneCoordinator.InitializePersistentScenesAsync(token: token);
             await SwitchToAsync(AppStateId.Bootstrap, token: token);
         }
 
@@ -76,26 +76,26 @@ namespace Core.AppStates.Runtime
             {
                 var nextState = stateId;
                 var nextPayload = payload;
+                AppStateSwitchOptions nextSwitchOptions = null;
 
                 while (!linkedToken.IsCancellationRequested)
                 {
                     AppStateExitResult result = await RunStateAsync(
                         nextState,
                         nextPayload,
+                        nextSwitchOptions,
                         linkedToken);
 
                     if (!result.HasNextState)
                         break;
 
-                    if (result.NextState != null)
-                        nextState = result.NextState.Value;
-
+                    nextState = result.NextState.Value;
                     nextPayload = result.Payload;
+                    nextSwitchOptions = result.SwitchOptions;
                 }
             }
             catch (OperationCanceledException) when (linkedToken.IsCancellationRequested)
             {
-                // Expected when exiting play mode or shutting down.
             }
             finally
             {
@@ -105,7 +105,6 @@ namespace Core.AppStates.Runtime
                 }
                 catch (ObjectDisposedException)
                 {
-                    // Only needed if someone still disposes the semaphore.
                 }
             }
         }
@@ -113,6 +112,7 @@ namespace Core.AppStates.Runtime
         private async UniTask<AppStateExitResult> RunStateAsync(
             AppStateId stateId,
             object payload,
+            AppStateSwitchOptions switchOptions,
             CancellationToken token)
         {
             if (CurrentState == stateId && _currentStateController != null)
@@ -125,7 +125,13 @@ namespace Core.AppStates.Runtime
 
             try
             {
-                await _sceneCoordinator.LoadStateScenesAsync(stateId, token);
+                if (switchOptions?.OnBeforeLoadAsync != null)
+                    await switchOptions.OnBeforeLoadAsync(token);
+
+                await _sceneCoordinator.LoadStateScenesAsync(
+                    stateId,
+                    switchOptions?.Progress,
+                    token);
 
                 _currentStateScope = _scopeBuilder.BuildScope(
                     _rootScope,
@@ -134,10 +140,13 @@ namespace Core.AppStates.Runtime
                 _currentStateController = _stateControllerFactory.Create(
                     stateId,
                     _currentStateScope.Container);
-                
+
                 CurrentState = stateId;
 
                 await _currentStateController.EnterAsync(payload, token);
+
+                if (switchOptions?.OnAfterEnterAsync != null)
+                    await switchOptions.OnAfterEnterAsync(token);
 
                 await _transition.HideAsync(token);
 

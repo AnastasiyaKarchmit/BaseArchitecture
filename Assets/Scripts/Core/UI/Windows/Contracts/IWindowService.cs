@@ -11,6 +11,8 @@ namespace Core.UI.Windows.Contracts
         event Action OnBecameEmpty;
 
         bool IsLoadingAnyWindow { get; }
+        
+        public IWindowService Parent { get; }
 
         UniTask<IWindow> CreateAsync(WindowId windowId, CancellationToken token = default);
         UniTask<TWindow> CreateAsync<TWindow>(WindowId windowId, CancellationToken token = default)

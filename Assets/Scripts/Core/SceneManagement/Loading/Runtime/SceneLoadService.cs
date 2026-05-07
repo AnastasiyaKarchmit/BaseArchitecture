@@ -3,38 +3,57 @@ using System.Collections.Generic;
 using System.Threading;
 using Core.SceneManagement.Loading.Contracts;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Core.SceneManagement.Loading.Runtime
 {
     public class SceneLoadService : ISceneLoadService
     {
-        public async UniTask LoadAdditiveAsync(string sceneName, CancellationToken token = default)
+        public async UniTask LoadAdditiveAsync(
+            string sceneName,
+            IProgress<float> progress = null,
+            CancellationToken token = default)
         {
             if (IsLoaded(sceneName))
+            {
+                progress?.Report(1f);
                 return;
+            }
 
-            await LoadAsync(sceneName, LoadSceneMode.Additive, token);
+            await LoadAsync(sceneName, LoadSceneMode.Additive, progress, token);
         }
 
-        public async UniTask LoadSingleAsync(string sceneName, CancellationToken token = default)
+        public async UniTask LoadSingleAsync(
+            string sceneName,
+            IProgress<float> progress = null,
+            CancellationToken token = default)
         {
-            await LoadAsync(sceneName, LoadSceneMode.Single, token);
+            await LoadAsync(sceneName, LoadSceneMode.Single, progress, token);
         }
 
-        public async UniTask UnloadAsync(string sceneName, CancellationToken token = default)
+        public async UniTask UnloadAsync(
+            string sceneName,
+            IProgress<float> progress = null,
+            CancellationToken token = default)
         {
             var scene = SceneManager.GetSceneByName(sceneName);
 
             if (!scene.IsValid() || !scene.isLoaded)
+            {
+                progress?.Report(1f);
                 return;
+            }
 
             var operation = SceneManager.UnloadSceneAsync(scene);
 
             if (operation == null)
+            {
+                progress?.Report(1f);
                 return;
+            }
 
-            await operation.ToUniTask(cancellationToken: token);
+            await TrackOperationAsync(operation, progress, token);
         }
 
         public bool IsLoaded(string sceneName)
@@ -61,6 +80,7 @@ namespace Core.SceneManagement.Loading.Runtime
         private static async UniTask LoadAsync(
             string sceneName,
             LoadSceneMode mode,
+            IProgress<float> progress,
             CancellationToken token)
         {
             var operation = SceneManager.LoadSceneAsync(sceneName, mode);
@@ -68,7 +88,24 @@ namespace Core.SceneManagement.Loading.Runtime
             if (operation == null)
                 throw new InvalidOperationException($"Cannot load scene '{sceneName}'. Check Build Settings.");
 
-            await operation.ToUniTask(cancellationToken: token);
+            await TrackOperationAsync(operation, progress, token);
+        }
+
+        private static async UniTask TrackOperationAsync(
+            AsyncOperation operation,
+            IProgress<float> progress,
+            CancellationToken token)
+        {
+            while (!operation.isDone)
+            {
+                token.ThrowIfCancellationRequested();
+
+                progress?.Report(Mathf.Clamp01(operation.progress / 0.9f));
+
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+
+            progress?.Report(1f);
         }
     }
 }

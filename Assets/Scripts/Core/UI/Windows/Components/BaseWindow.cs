@@ -10,9 +10,9 @@ namespace Core.UI.Windows.Components
     {
         [SerializeField] private RectTransform rootRectTransform;
         [SerializeField] private CanvasGroup canvasGroup;
-
-        private const float FadeInDuration = 0.2f;
-        private const float FadeOutDuration = 0.2f;
+        [SerializeField] private float fadeInDuration = 0.2f;
+        [SerializeField] private float fadeOutDuration = 0.2f;
+        
         private const float MaxAnimationDeltaTime = 1f / 20f;
         
         private CancellationTokenSource _animationCts;
@@ -35,7 +35,7 @@ namespace Core.UI.Windows.Components
             {
                 gameObject.SetActive(true);
 
-                await AnimateAlphaAsync(0f, 1f, FadeInDuration, token);
+                await AnimateAlphaAsync(0f, 1f, fadeInDuration, token);
 
                 if (!IsAlive())
                     return;
@@ -75,7 +75,7 @@ namespace Core.UI.Windows.Components
                     return;
                 }
 
-                await AnimateAlphaAsync(startAlpha, 0f, FadeOutDuration, token);
+                await AnimateAlphaAsync(startAlpha, 0f, fadeOutDuration, token);
 
                 if (IsAlive())
                     gameObject.SetActive(false);
