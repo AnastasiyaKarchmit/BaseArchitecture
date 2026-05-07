@@ -16,6 +16,7 @@ namespace Features.MainMenu
     {
         private readonly MainMenuFlowController _flowController;
         private readonly IWindowService _windowService;
+        private readonly MainMenuAudioController _audioController;
 
         private readonly CompositeDisposable _disposables = new();
 
@@ -26,9 +27,11 @@ namespace Features.MainMenu
 
         public MainMenuAppStateController(
             MainMenuFlowController flowController,
+            MainMenuAudioController audioController,
             IWindowService windowService)
         {
             _flowController = flowController ?? throw new ArgumentNullException(nameof(flowController));
+            _audioController = audioController ?? throw new ArgumentNullException(nameof(audioController));
             _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
         }
 
@@ -51,6 +54,7 @@ namespace Features.MainMenu
                 })
                 .AddTo(_disposables);
 
+            await _audioController.EnterAsync(token);
             await _flowController.EnterAsync(token);
         }
 
@@ -70,7 +74,9 @@ namespace Features.MainMenu
 
             _disposables.Clear();
 
-            await _flowController.ExitAsync(token);
+            await UniTask.WhenAll(
+                _flowController.ExitAsync(token),
+                _audioController.ExitAsync(token));
         }
 
         public void Dispose()
@@ -81,6 +87,7 @@ namespace Features.MainMenu
 
             _disposables.Dispose();
             _flowController.Dispose();
+            _audioController.Dispose();
         }
 
         private async UniTask RequestGameplayAsync(CancellationToken token)

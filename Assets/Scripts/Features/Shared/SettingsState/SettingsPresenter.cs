@@ -22,6 +22,7 @@ namespace Features.Shared.SettingsState
         private readonly CompositeDisposable _disposables = new();
         private readonly CompositeDisposable _screenDisposables = new();
 
+        private readonly ReactiveCommand<float> _masterVolumeChanged  = new();
         private readonly ReactiveCommand<float> _musicVolumeChanged = new();
         private readonly ReactiveCommand<float> _sfxVolumeChanged = new();
         private readonly ReactiveCommand<Unit> _resetClicked = new();
@@ -58,6 +59,7 @@ namespace Features.Shared.SettingsState
             token.ThrowIfCancellationRequested();
 
             SettingsViewCommands commands = new(
+                _masterVolumeChanged,
                 _musicVolumeChanged,
                 _sfxVolumeChanged,
                 _resetClicked,
@@ -93,6 +95,7 @@ namespace Features.Shared.SettingsState
             _screenDisposables.Dispose();
             _disposables.Dispose();
 
+            _masterVolumeChanged.Dispose();
             _musicVolumeChanged.Dispose();
             _sfxVolumeChanged.Dispose();
             _resetClicked.Dispose();
@@ -101,6 +104,10 @@ namespace Features.Shared.SettingsState
 
         private void SubscribeToCommands()
         {
+            _masterVolumeChanged
+                .Subscribe(value => _settingsService.SetMasterVolume(value))
+                .AddTo(_disposables);
+            
             _musicVolumeChanged
                 .Subscribe(value => _settingsService.SetMusicVolume(value))
                 .AddTo(_disposables);

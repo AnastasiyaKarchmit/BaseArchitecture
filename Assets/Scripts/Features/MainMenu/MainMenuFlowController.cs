@@ -91,8 +91,7 @@ namespace Features.MainMenu
                     _windowTransitionBackground.Create();
                     await _mainMenuPresenter.ExitAsync(_currentToken);
                 })
-                .Permit(MainMenuFlowTrigger.OpenSettings, MainMenuFlowState.Settings)
-                .Ignore(MainMenuFlowTrigger.BackToMain);
+                .Permit(MainMenuFlowTrigger.OpenSettings, MainMenuFlowState.Settings);
 
             _stateMachine.Configure(MainMenuFlowState.Settings)
                 .OnEntryAsync(async () =>
@@ -105,8 +104,7 @@ namespace Features.MainMenu
                     await UniTask.SwitchToMainThread();
                     await _settingsPresenter.ExitAsync(_currentToken);
                 })
-                .Permit(MainMenuFlowTrigger.BackToMain, MainMenuFlowState.Main)
-                .Ignore(MainMenuFlowTrigger.OpenSettings);
+                .Permit(MainMenuFlowTrigger.BackToMain, MainMenuFlowState.Main);
 
             _stateMachine.OnTransitionCompleted(transition =>
             {

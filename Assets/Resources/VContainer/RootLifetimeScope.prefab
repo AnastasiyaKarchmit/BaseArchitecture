@@ -97,3 +97,5 @@ MonoBehaviour:
   windowServiceConfig: {fileID: 11400000, guid: dc71fe190d1e2ea48afda1ceb91faf12, type: 2}
   eventSystemPrefab: {fileID: 5017999668956972448, guid: 6d19fa026706472f8399d9dcbe97e4a2, type: 3}
   appLifecycleService: {fileID: 6070076189680720735}
+  audioServiceConfig: {fileID: 11400000, guid: 0460a6a3cc754fa429b7f4d47deb36da, type: 2}
+  audioDatabase: {fileID: 11400000, guid: a8a7b46d90770d8419d87a5c181cf347, type: 2}

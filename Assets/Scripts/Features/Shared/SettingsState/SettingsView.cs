@@ -11,12 +11,14 @@ namespace Features.Shared.SettingsState
 {
     public sealed class SettingsView : BaseView
     {
+        [SerializeField] private Slider masterVolumeSlider;
         [SerializeField] private Slider musicVolumeSlider;
         [SerializeField] private Slider sfxVolumeSlider;
 
         [SerializeField] private Button resetButton;
         [SerializeField] private Button backButton;
 
+        [SerializeField] private TMP_Text masterVolumeText;
         [SerializeField] private TMP_Text musicVolumeText;
         [SerializeField] private TMP_Text sfxVolumeText;
         [SerializeField] private TMP_Text titleText;
@@ -42,6 +44,9 @@ namespace Features.Shared.SettingsState
 
             if (sfxVolumeSlider != null)
                 sfxVolumeSlider.SetValueWithoutNotify(values.SfxVolume);
+            
+            if (masterVolumeSlider != null)
+                masterVolumeSlider.SetValueWithoutNotify(values.MasterVolume);
 
             UpdateVolumeTexts(values);
         }
@@ -60,6 +65,19 @@ namespace Features.Shared.SettingsState
 
         private void SetupListeners(SettingsViewCommands commands)
         {
+            if (masterVolumeSlider != null)
+            {
+                Observable.FromEvent<float>(
+                        handler => masterVolumeSlider.onValueChanged.AddListener(handler.Invoke),
+                        handler => masterVolumeSlider.onValueChanged.RemoveListener(handler.Invoke))
+                    .Subscribe(value =>
+                    {
+                        UpdateMasterVolumeText(value);
+                        commands.MasterVolumeCommand.Execute(value);
+                    })
+                    .AddTo(_disposables);
+            }
+            
             if (musicVolumeSlider != null)
             {
                 Observable.FromEvent<float>(
@@ -109,10 +127,17 @@ namespace Features.Shared.SettingsState
 
         private void UpdateVolumeTexts(SettingsValues values)
         {
+            UpdateMasterVolumeText(values.MasterVolume);
             UpdateMusicVolumeText(values.MusicVolume);
             UpdateSfxVolumeText(values.SfxVolume);
         }
 
+        private void UpdateMasterVolumeText(float value)
+        {
+            if (masterVolumeText != null)
+                masterVolumeText.text = $"{Mathf.RoundToInt(value * 100)}%"; 
+        }
+        
         private void UpdateMusicVolumeText(float value)
         {
             if (musicVolumeText != null)

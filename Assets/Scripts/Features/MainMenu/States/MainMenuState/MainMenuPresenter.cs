@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Core.Audio.Contracts;
 using Core.Input.Contracts;
 using Core.Input.Runtime;
 using Core.Patterns.MVP;
@@ -15,9 +16,11 @@ namespace Features.MainMenu.States.MainMenuState
         private readonly MainMenuModel _model;
         private readonly IWindowService _windowService;
         private readonly IInputService _inputService;
+        private readonly IUISoundPlayer _uiSoundPlayer;
 
         private readonly ReactiveCommand<Unit> _playCommand = new();
         private readonly ReactiveCommand<Unit> _settingsCommand = new();
+        private readonly CompositeDisposable _disposables = new();
 
         private MainMenuView _view;
 
@@ -27,11 +30,15 @@ namespace Features.MainMenu.States.MainMenuState
         public MainMenuPresenter(
             MainMenuModel model,
             IWindowService windowService,
-            IInputService inputService)
+            IInputService inputService,
+            IUISoundPlayer uiSoundPlayer)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
             _inputService = inputService ?? throw new ArgumentNullException(nameof(inputService));
+            _uiSoundPlayer = uiSoundPlayer ?? throw new ArgumentNullException(nameof(uiSoundPlayer));
+
+            SubscribeToAudioEvents();
         }
 
         public async UniTask EnterAsync(CancellationToken token = default)
@@ -64,10 +71,22 @@ namespace Features.MainMenu.States.MainMenuState
             _view?.HideInstantly();
         }
 
+        private void SubscribeToAudioEvents()
+        {
+            _playCommand
+                .Subscribe(_ => _uiSoundPlayer.PlayButtonClick())
+                .AddTo(_disposables);
+
+            _settingsCommand
+                .Subscribe(_ => _uiSoundPlayer.PlayButtonClick())
+                .AddTo(_disposables);
+        }
+        
         public void Dispose()
         {
             _playCommand.Dispose();
             _settingsCommand.Dispose();
+            _disposables.Dispose();
         }
     }
 }

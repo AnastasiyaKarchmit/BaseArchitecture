@@ -16,6 +16,7 @@ namespace Features.MainMenu
             builder.Register<SettingsPresenter>(Lifetime.Singleton);
             builder.Register<SettingsView>(Lifetime.Singleton);
             builder.Register<MainMenuFlowController>(Lifetime.Singleton);
+            builder.Register<MainMenuAudioController>(Lifetime.Singleton);
             builder.Register<MainMenuAppStateController>(Lifetime.Singleton);
             builder.Register<IWindowTransitionBackground, WindowTransitionBackground>(Lifetime.Singleton);
         }

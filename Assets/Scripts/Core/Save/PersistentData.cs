@@ -27,8 +27,9 @@ namespace Core.Save
     [Serializable]
     public sealed class SettingsData
     {
+        public float MasterVolume = 0.5f;
         public float MusicVolume = 1f;
         public float SfxVolume = 1f;
-        public bool Fullscreen;
+        public bool MasterMuted;
     }
 }

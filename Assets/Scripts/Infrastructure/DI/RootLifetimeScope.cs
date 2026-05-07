@@ -2,6 +2,9 @@ using System;
 using Core.Application;
 using Core.AppStates.Contracts;
 using Core.AppStates.Runtime;
+using Core.Audio.Configs;
+using Core.Audio.Contracts;
+using Core.Audio.Runtime;
 using Core.Input.Runtime;
 using Core.Save;
 using Core.Save.JSON;
@@ -30,12 +33,15 @@ namespace Infrastructure.DI
         [SerializeField] private WindowServiceConfig windowServiceConfig;
         [SerializeField] private GameObject eventSystemPrefab;
         [SerializeField] private AppLifecycleService appLifecycleService;
+        [SerializeField] private AudioServiceConfig audioServiceConfig;
+        [SerializeField] private AudioDatabase audioDatabase;
 
         protected override void Configure(IContainerBuilder builder)
         {
             RegisterSceneManagement(builder);
             RegisterAppStateSystem(builder);
             RegisterConfigs(builder);
+            RegisterAudioSystem(builder);
             RegisterServices(builder);
             RegisterSaveSystem(builder);
         }
@@ -99,7 +105,9 @@ namespace Infrastructure.DI
             builder.Register<WindowService>(Lifetime.Scoped).AsImplementedInterfaces();
             builder.RegisterComponent(appLifecycleService)
                 .As<IAppLifecycleService>();
-            builder.Register<ISettingsService, SettingsService>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<SettingsService>()
+                .As<ISettingsService>()
+                .AsSelf();
             RegisterInputService(builder);
         }
 
@@ -115,5 +123,18 @@ namespace Infrastructure.DI
             
             builder.RegisterEntryPoint<SaveSystem>().As<ISaveSystem>();
         }
+        private void RegisterAudioSystem(IContainerBuilder builder)
+        {
+            builder.RegisterInstance(audioServiceConfig);
+            builder.RegisterInstance<IAudioDatabase>(audioDatabase);
+            
+            builder.Register<UISoundPlayer>(Lifetime.Singleton)
+                .As<IUISoundPlayer>();
+
+            builder.RegisterEntryPoint<AudioService>()
+                .As<IAudioService>()
+                .AsSelf();
+        }
+        
     }
 }
