@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using Core.Input.Runtime;
 using Cysharp.Threading.Tasks;
 using Features.Gameplay.States.GameplayState;
 using Features.Gameplay.States.PauseState;
@@ -29,15 +28,12 @@ namespace Features.Gameplay
         private readonly GameplayPresenter _gameplayPresenter;
         private readonly PausePresenter _pausePresenter;
         private readonly SettingsPresenter _settingsPresenter;
-        private readonly InputGate _inputGate;
         
         private readonly StateMachine<GameplayFlowState, GameplayFlowTrigger> _stateMachine;
         private readonly CompositeDisposable _disposables = new();
         private readonly ReactiveCommand<Unit> _backToMenuRequested = new();
         
         private CancellationToken _currentToken;
-        
-        private const float InputUnlockDelay = 0.2f;
         
         private bool _isTransitioning;
         
@@ -46,13 +42,11 @@ namespace Features.Gameplay
         public GameplayFlowController(
             GameplayPresenter gameplayPresenter,
             PausePresenter pausePresenter,
-            SettingsPresenter settingsPresenter,
-            InputGate inputGate)
+            SettingsPresenter settingsPresenter)
         {
             _gameplayPresenter = gameplayPresenter ??  throw new ArgumentNullException(nameof(gameplayPresenter));
             _pausePresenter = pausePresenter ??  throw new ArgumentNullException(nameof(pausePresenter));
             _settingsPresenter = settingsPresenter ??  throw new ArgumentNullException(nameof(settingsPresenter));
-            _inputGate = inputGate ??  throw new ArgumentNullException(nameof(inputGate));
             
             _stateMachine =  new StateMachine<GameplayFlowState, GameplayFlowTrigger>(GameplayFlowState.Gameplay);
             
@@ -93,8 +87,6 @@ namespace Features.Gameplay
                     await _gameplayPresenter.ExitAsync(_currentToken);
                 })
                 .Permit(GameplayFlowTrigger.OpenPause, GameplayFlowState.Pause);
-                // .Ignore(GameplayFlowTrigger.OpenSettings)
-                // .Ignore(GameplayFlowTrigger.StartGameplay);
 
             _stateMachine.Configure(GameplayFlowState.Pause)
                 .OnEntryAsync(async () =>
@@ -109,7 +101,6 @@ namespace Features.Gameplay
                 })
                 .Permit(GameplayFlowTrigger.StartGameplay, GameplayFlowState.Gameplay)
                 .Permit(GameplayFlowTrigger.OpenSettings, GameplayFlowState.Settings);
-                // .Ignore(GameplayFlowTrigger.OpenPause);
 
             _stateMachine.Configure(GameplayFlowState.Settings)
                 .OnEntryAsync(async () =>
@@ -123,8 +114,6 @@ namespace Features.Gameplay
                     await _settingsPresenter.ExitAsync(_currentToken);
                 })
                 .Permit(GameplayFlowTrigger.OpenPause, GameplayFlowState.Pause);
-                // .Ignore(GameplayFlowTrigger.OpenSettings)
-                // .Ignore(GameplayFlowTrigger.StartGameplay);
 
             _stateMachine.OnTransitionCompleted(transition =>
             {
@@ -136,19 +125,31 @@ namespace Features.Gameplay
         {
             _gameplayPresenter.PauseRequested
                 .SubscribeAwait(
-                    async (_, token) => await FireAsync(GameplayFlowTrigger.OpenPause),
+                    async (_, token) =>
+                    {
+                        await UniTask.SwitchToMainThread();
+                        await FireAsync(GameplayFlowTrigger.OpenPause);
+                    },
                     AwaitOperation.Drop)
                 .AddTo(_disposables);
             
             _pausePresenter.ResumeRequested
                 .SubscribeAwait(
-                    async (_, token) => await FireAsync(GameplayFlowTrigger.StartGameplay),
+                    async (_, token) =>
+                    {
+                        await UniTask.SwitchToMainThread();
+                        await FireAsync(GameplayFlowTrigger.StartGameplay);
+                    },
                     AwaitOperation.Drop)
                 .AddTo(_disposables);
             
             _pausePresenter.SettingsRequested
                 .SubscribeAwait(
-                    async (_, token) => await FireAsync(GameplayFlowTrigger.OpenSettings),
+                    async (_, token) =>
+                    {
+                        await UniTask.SwitchToMainThread();
+                        await FireAsync(GameplayFlowTrigger.OpenSettings);
+                    },
                     AwaitOperation.Drop)
                 .AddTo(_disposables);
             
@@ -158,7 +159,11 @@ namespace Features.Gameplay
 
             _settingsPresenter.BackRequested
                 .SubscribeAwait(
-                    async (_, token) => await FireAsync(GameplayFlowTrigger.OpenPause),
+                    async (_, token) =>
+                    {
+                        await UniTask.SwitchToMainThread();
+                        await FireAsync(GameplayFlowTrigger.OpenPause);
+                    },
                     AwaitOperation.Drop)
                 .AddTo(_disposables);
         }
@@ -166,10 +171,10 @@ namespace Features.Gameplay
         private async UniTask FireAsync(GameplayFlowTrigger trigger)
         {
             if (_isTransitioning)
+            {
+                Debug.Log("Already transitioning");
                 return;
-
-            if (!_inputGate.CanReceiveInput)
-                return;
+            }
 
             if (!_stateMachine.CanFire(trigger))
             {
@@ -178,18 +183,15 @@ namespace Features.Gameplay
             }
 
             _isTransitioning = true;
-            _inputGate.Block();
 
             try
             {
+                Debug.Log($"Fired {trigger} from {_stateMachine.State}" );
                 await _stateMachine.FireAsync(trigger);
             }
             finally
             {
                 _isTransitioning = false;
-
-                _inputGate.Unblock();
-                _inputGate.BlockFor(InputUnlockDelay);
             }
         }
         

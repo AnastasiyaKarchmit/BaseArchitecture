@@ -9,6 +9,7 @@ using Core.UI.Windows.Contracts;
 using Core.UI.Windows.Data;
 using Cysharp.Threading.Tasks;
 using R3;
+using UnityEngine;
 
 namespace Features.Shared.SettingsState
 {
@@ -92,6 +93,7 @@ namespace Features.Shared.SettingsState
 
         public void Dispose()
         {
+            Debug.Log("SettingsPresenter::Dispose");
             _screenDisposables.Dispose();
             _disposables.Dispose();
 
@@ -132,7 +134,11 @@ namespace Features.Shared.SettingsState
             _inputService.UI.Cancel.Performed
                 .Where(pressed => pressed)
                 .ThrottleFirst(_inputThrottle)
-                .Subscribe(_ => _backClicked.Execute(Unit.Default))
+                .Subscribe(_ =>
+                {
+                    Debug.Log("Settings Presenter registered cancel clicked");
+                    _backClicked.Execute(Unit.Default);
+                })
                 .AddTo(_screenDisposables);
         }
     }

@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using Core.Input.Runtime;
 using Core.UI.Windows.Contracts;
 using Cysharp.Threading.Tasks;
 using Features.MainMenu.States.MainMenuState;
@@ -27,7 +26,6 @@ namespace Features.MainMenu
     {
         private readonly MainMenuPresenter _mainMenuPresenter;
         private readonly SettingsPresenter _settingsPresenter;
-        private readonly InputGate _inputGate;
         private readonly IWindowTransitionBackground _windowTransitionBackground;
 
         private readonly StateMachine<MainMenuFlowState, MainMenuFlowTrigger> _stateMachine;
@@ -36,20 +34,16 @@ namespace Features.MainMenu
 
         private CancellationToken _currentToken;
         
-        private const float InputUnlockDelay = 0.2f;
-        
         private bool _isTransitioning;
 
         public Observable<Unit> PlayRequested => _playRequested;
 
         public MainMenuFlowController(
             MainMenuPresenter mainMenuPresenter,
-            SettingsPresenter settingsPresenter,
-            InputGate inputGate, IWindowTransitionBackground windowTransitionBackground)
+            SettingsPresenter settingsPresenter, IWindowTransitionBackground windowTransitionBackground)
         {
             _mainMenuPresenter = mainMenuPresenter ?? throw new ArgumentNullException(nameof(mainMenuPresenter));
             _settingsPresenter = settingsPresenter ?? throw new ArgumentNullException(nameof(settingsPresenter));
-            _inputGate = inputGate ?? throw new ArgumentNullException(nameof(inputGate));
             _windowTransitionBackground = windowTransitionBackground 
                                           ?? throw new ArgumentNullException(nameof(windowTransitionBackground));
 
@@ -126,7 +120,11 @@ namespace Features.MainMenu
 
             _settingsPresenter.BackRequested
                 .SubscribeAwait(
-                    async (_, token) => await FireAsync(MainMenuFlowTrigger.BackToMain),
+                    async (_, token) =>
+                    {
+                        Debug.Log($"Back requested, current state: {_stateMachine.State}");
+                        await FireAsync(MainMenuFlowTrigger.BackToMain);
+                    },
                     AwaitOperation.Drop)
                 .AddTo(_disposables);
         }
@@ -134,10 +132,10 @@ namespace Features.MainMenu
         private async UniTask FireAsync(MainMenuFlowTrigger trigger)
         {
             if (_isTransitioning)
+            {
+                Debug.Log("Already transitioning");
                 return;
-
-            if (!_inputGate.CanReceiveInput)
-                return;
+            }
 
             if (!_stateMachine.CanFire(trigger))
             {
@@ -146,23 +144,21 @@ namespace Features.MainMenu
             }
 
             _isTransitioning = true;
-            _inputGate.Block();
 
             try
             {
+                Debug.Log($"Fired {trigger} from {_stateMachine.State}" );
                 await _stateMachine.FireAsync(trigger);
             }
             finally
             {
                 _isTransitioning = false;
-
-                _inputGate.Unblock();
-                _inputGate.BlockFor(InputUnlockDelay);
             }
         }
 
         public void Dispose()
         {
+            Debug.Log($"Disposing Main Menu Flow Controller.");
             _disposables.Dispose();
             _playRequested.Dispose();
 

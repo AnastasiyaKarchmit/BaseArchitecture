@@ -39,7 +39,7 @@ namespace Features.Gameplay.States.GameplayState
 
         public async UniTask EnterAsync(CancellationToken token = default)
         {
-            _inputService.SetMode(InputMode.Disabled);
+            //_inputService.SetMode(InputMode.Disabled);
 
             _view = await _windowService.GetOrCreateAsync<GameplayView>(
                 WindowId.GameplayHud,
@@ -50,10 +50,10 @@ namespace Features.Gameplay.States.GameplayState
             //_view.Initialize(_playCommand, _settingsCommand);
 
             await _view.ShowAsync();
+
+            SubscribeToInput();
             
             _inputService.SetMode(InputMode.Gameplay);
-            
-            SubscribeToInput();
             
             Time.timeScale = 1;
         }

@@ -43,8 +43,8 @@ namespace Features.MainMenu.States.MainMenuState
 
         public async UniTask EnterAsync(CancellationToken token = default)
         {
-            _inputService.SetMode(InputMode.Disabled);
-
+            _inputService.SetMode(InputMode.UIOnly);
+            
             _view = await _windowService.GetOrCreateAsync<MainMenuView>(
                 WindowId.MainMenu,
                 token);
@@ -54,8 +54,6 @@ namespace Features.MainMenu.States.MainMenuState
             _view.Initialize(_playCommand, _settingsCommand);
 
             await _view.ShowAsync();
-            
-            _inputService.SetMode(InputMode.UIOnly);
         }
 
         public async UniTask ExitAsync(CancellationToken token = default)

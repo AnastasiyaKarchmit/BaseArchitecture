@@ -43,9 +43,8 @@ namespace Features.Gameplay.States.PauseState
         
         public async UniTask EnterAsync(CancellationToken token = default)
         {
-            Time.timeScale = 0;
-            
             _inputService.SetMode(InputMode.Disabled);
+            Time.timeScale = 0;
 
             _view = await _windowService.GetOrCreateAsync<PauseView>(
                 WindowId.Pause,
@@ -59,7 +58,7 @@ namespace Features.Gameplay.States.PauseState
             
             _inputService.SetMode(InputMode.UIOnly);
 
-            Cursor.lockState = CursorLockMode.Confined;
+            //Cursor.lockState = CursorLockMode.Confined;
 
             SubscribeToInput();
         }
