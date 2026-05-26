@@ -10,5 +10,8 @@ namespace Core.UI.Windows.Data
         Error, 
         LoadingScreen,
         BootstrapLoadingScreen,
+        PickupPopup,
+        ConfirmationPopup,
+        MessagePopup
     }
 }

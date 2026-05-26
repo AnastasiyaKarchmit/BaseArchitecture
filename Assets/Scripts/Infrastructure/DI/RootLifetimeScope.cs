@@ -15,6 +15,10 @@ using Core.SceneManagement.AppStateScenes.Runtime;
 using Core.SceneManagement.Loading.Contracts;
 using Core.SceneManagement.Loading.Runtime;
 using Core.Settings;
+using Core.UI.Popups.Contracts;
+using Core.UI.Popups.Runtime;
+using Core.UI.Popups.Runtime.Handlers;
+using Core.UI.Popups.Runtime.Handlers.Core;
 using Core.UI.Windows.Config;
 using Core.UI.Windows.Runtime;
 using Infrastructure.Factories;
@@ -44,6 +48,7 @@ namespace Infrastructure.DI
             RegisterAudioSystem(builder);
             RegisterServices(builder);
             RegisterSaveSystem(builder);
+            RegisterPopups(builder);
         }
 
         private void RegisterSceneManagement(IContainerBuilder builder)
@@ -135,6 +140,24 @@ namespace Infrastructure.DI
                 .As<IAudioService>()
                 .AsSelf();
         }
-        
+
+        private void RegisterPopups(IContainerBuilder builder)
+        {
+            builder.Register<PopupService>(Lifetime.Scoped)
+                .As<IPopupService>()
+                .AsSelf();
+            
+            builder.Register<TimedPopupHandler>(Lifetime.Scoped)
+                .As<IPopupHandler>()
+                .AsSelf();;
+            
+            builder.Register<ConfirmationPopupHandler>(Lifetime.Scoped)
+                .As<IPopupHandler>()
+                .AsSelf();;
+            
+            builder.Register<MessagePopupHandler>(Lifetime.Scoped)
+                .As<IPopupHandler>()
+                .AsSelf();
+        }
     }
 }
